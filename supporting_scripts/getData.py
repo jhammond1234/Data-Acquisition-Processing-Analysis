@@ -22,7 +22,7 @@ def getSNOTELData(SiteName, SiteID, StateAbb, StartDate, EndDate, OutputFolder):
     print(f'Start retrieving data for {SiteName}, {SiteID} \n {url}')
 
     http = urllib3.PoolManager()
-    response = http.request('GET', url, timeout = 30)
+    response = http.request('GET', url)
     data = response.data.decode('utf-8')
     i=0
     for line in data.split("\n"):

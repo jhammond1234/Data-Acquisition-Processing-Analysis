@@ -208,4 +208,6 @@ __marimo__/
 
 #prevent geospatial files from being added to git, these are large and not needed for the project
 files/*
+Figures/*
 SNOTEL_sln.ipynb
+cache/*

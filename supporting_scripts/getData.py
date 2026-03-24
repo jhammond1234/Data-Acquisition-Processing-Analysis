@@ -342,3 +342,48 @@ if __name__ == "__main__":
 	EndDate = sys.argv[5]
 	OutputFolder = sys.argv[6]
 	
+#MODIS Snowcover Data Fetcher
+def get_SnowCover_daily(basin_polygon_coords, begin_date='2025-12-30', end_date=None):
+    #EE only needs to import in the function that is being called, so we can import it here to avoid issues with the other functions that are not being called in this script
+    import ee
+    print("Authenticating with Earth Engine...")
+    ee.Authenticate()
+    print("Initializing Earth Engine...")
+    ee.Initialize()
+    print("Earth Engine initialized successfully.")
+    
+    basin_polygon = ee.Geometry.Polygon(basin_polygon_coords)
+    
+    if end_date is None:
+        end_date = datetime.datetime.today().strftime('%Y-%m-%d')
+    
+    # Load Hourly
+    MODISHourly = (ee.ImageCollection("MODIS/061/MYD10A1")
+                    .filterBounds(basin_polygon)
+                    .filterDate(begin_date, end_date))
+    
+    # Setup Date Math
+    start = ee.Date(begin_date)
+    end = ee.Date(end_date)
+    diff = end.difference(start, 'day')
+    day_list = ee.List.sequence(0, diff.subtract(1))
+    
+    # Map Daily Aggregation
+    daily_func = wrap_make_daily(MODISHourly, start)
+    daily_collection = ee.ImageCollection.fromImages(day_list.map(daily_func))
+    
+    # Map Spatial Reduction
+    results = daily_collection.map(lambda img: getData.get_all_metrics(img, basin_polygon)).getInfo()
+    
+    df = pd.DataFrame([f['properties'] for f in results['features']]) 
+    
+    # Reorder columns to put date first
+    cols = ['date'] + [c for c in df.columns if c != 'date']
+    df = df[cols]
+    
+    df['date'] = df['date'].str.split('T').str[0]
+    df['date'] = pd.to_datetime(df['date'])
+    df.rename(columns={'date':'Date'}, inplace=True)
+    df.set_index('Date', drop = True, inplace = True)
+    
+    return df
